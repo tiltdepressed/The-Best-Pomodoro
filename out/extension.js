@@ -119,6 +119,7 @@ const handleWebviewMessage = (message) => {
         clearInterval(timerInterval);
         isRunning = false;
         switchPhase();
+        panel?.webview.postMessage({ type: 'change-button', label: 'Start' }); // После пропуска ставим "Start"
     }
     else if (message.type === 'open-settings') {
         panel?.webview.postMessage({
@@ -191,7 +192,6 @@ const openLargeTimer = () => {
                     const timerElement = document.getElementById('timer');
                     const settingsIcon = document.getElementById('settingsIcon');
                     const settingsMenu = document.getElementById('settingsMenu');
-                    const applySettingsButton = document.getElementById('applySettings');
 
                     toggleButton.addEventListener('click', () => {
                         vscode.postMessage({ type: 'toggle-timer' });
@@ -202,10 +202,10 @@ const openLargeTimer = () => {
                     });
 
                     settingsIcon.addEventListener('click', () => {
-                        settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none';
+                        settingsMenu.style.display = 'block';
                     });
 
-                    applySettingsButton.addEventListener('click', () => {
+                    document.getElementById('applySettings').addEventListener('click', () => {
                         const workDuration = document.getElementById('workDuration').value;
                         const shortBreakDuration = document.getElementById('shortBreakDuration').value;
                         const longBreakDuration = document.getElementById('longBreakDuration').value;
@@ -252,6 +252,6 @@ const openLargeTimer = () => {
         panel = null;
     });
 };
-// Открываем таймер при запуске расширения
+// Регистрация команды для открытия таймера
 vscode.commands.registerCommand('pomodoro.openLargeTimer', openLargeTimer);
 //# sourceMappingURL=extension.js.map

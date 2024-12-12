@@ -11,7 +11,7 @@
   "contributes": {
     "commands": [
       {
-        "command": "pomodoro.start",
+        "command": "pomodoro.openLargeTimer",
         "title": "Pomodoro Start"
       }
     ]
