@@ -1,152 +1,152 @@
 import * as vscode from 'vscode';
 
-export function activate(context: vscode.ExtensionContext) {
-    let disposable = vscode.commands.registerCommand('pomodoro.start', () => {
-        const panel = vscode.window.createWebviewPanel(
+let timerInterval: NodeJS.Timeout | null = null;
+let remainingTime = 25 * 60; // Начальное время 25 минут в секундах
+let isRunning = false;
+let phaseText = 'Time to Code!'; // Начальный текст фазы
+let workPhaseCount = 0; // Счетчик фаз работы
+let isBreakPhase = true; // Флаг, указывающий на фазу перерыва
+
+// Начальные параметры времени
+let workDuration = 25 * 60;
+let shortBreakDuration = 5 * 60;
+let longBreakDuration = 15 * 60;
+let longBreakInterval = 4;
+
+// Цвета для фаз
+let workColor = '#FF0000';
+let shortBreakColor = '#40E0D0';
+let longBreakColor = '#FFD700';
+
+// Строка состояния для маленького таймера
+const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+statusBarItem.text = `$(watch) Pomodoro: 25:00`;
+statusBarItem.tooltip = 'Pomodoro Timer';
+statusBarItem.command = 'pomodoro.openLargeTimer'; // Открыть большой таймер при клике
+statusBarItem.show();
+
+// Функция для обновления времени
+const updateTimeDisplay = () => {
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = remainingTime % 60;
+    let color = workColor;
+
+    if (phaseText === 'Short Break') {
+        color = shortBreakColor;
+    } else if (phaseText === 'Long Break') {
+        color = longBreakColor;
+    }
+
+    // Обновляем маленький таймер в строке состояния
+    statusBarItem.text = `$(watch) Pomodoro: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+    // Также можно отправлять обновления в webview (если оно открыто)
+    if (panel) {
+        panel.webview.postMessage({
+            type: 'update-time',
+            time: `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`,
+            phaseText: phaseText,
+            color: color
+        });
+    }
+};
+
+// Функция для переключения фаз
+const switchPhase = () => {
+    if (isBreakPhase) {
+        workPhaseCount++;
+        if (workPhaseCount % longBreakInterval === 0) {
+            remainingTime = longBreakDuration;
+            phaseText = 'Long Break';
+        } else {
+            remainingTime = shortBreakDuration;
+            phaseText = 'Short Break';
+        }
+        isBreakPhase = false;
+    } else {
+        remainingTime = workDuration;
+        phaseText = 'Time to Code!';
+        isBreakPhase = true;
+    }
+    updateTimeDisplay();
+};
+
+// Обработчик сообщений от webview
+const handleWebviewMessage = (message: any) => {
+    if (message.type === 'toggle-timer') {
+        if (isRunning) {
+            clearInterval(timerInterval!);
+            isRunning = false;
+            panel?.webview.postMessage({ type: 'change-button', label: 'Start' });
+            panel?.webview.postMessage({ type: 'toggle-skip-button', visible: false });
+        } else {
+            timerInterval = setInterval(() => {
+                remainingTime -= 1;
+                if (remainingTime <= 0) {
+                    clearInterval(timerInterval!);
+                    isRunning = false;
+                    switchPhase();
+                } else {
+                    updateTimeDisplay();
+                }
+            }, 1000);
+            isRunning = true;
+            panel?.webview.postMessage({ type: 'change-button', label: 'Stop' });
+            panel?.webview.postMessage({ type: 'toggle-skip-button', visible: true });
+        }
+    } else if (message.type === 'skip-timer') {
+        clearInterval(timerInterval!);
+        isRunning = false;
+        switchPhase();
+    } else if (message.type === 'open-settings') {
+        panel?.webview.postMessage({
+            type: 'open-settings',
+            workDuration,
+            shortBreakDuration,
+            longBreakDuration,
+            longBreakInterval,
+            workColor,
+            shortBreakColor,
+            longBreakColor
+        });
+    } else if (message.type === 'apply-settings') {
+        workDuration = message.workDuration;
+        shortBreakDuration = message.shortBreakDuration;
+        longBreakDuration = message.longBreakDuration;
+        longBreakInterval = message.longBreakInterval;
+        workColor = message.workColor;
+        shortBreakColor = message.shortBreakColor;
+        longBreakColor = message.longBreakColor;
+
+        remainingTime = workDuration;
+        phaseText = 'Time to Code!';
+        isBreakPhase = true;
+        updateTimeDisplay();
+        panel?.webview.postMessage({ type: 'close-settings' });
+    }
+};
+
+// Обработчик команды для открытия большого таймера
+let panel: vscode.WebviewPanel | null = null;
+const openLargeTimer = () => {
+    if (!panel) {
+        // Создаем панель, если она еще не была создана
+        panel = vscode.window.createWebviewPanel(
             'pomodoro', 
             'Pomodoro Timer', 
             vscode.ViewColumn.One, 
             {
-                enableScripts: true, 
+                enableScripts: true,
             }
         );
 
-        let timerInterval: NodeJS.Timeout | null = null;
-        let remainingTime = 25 * 60; // Начальное время 25 минут в секундах
-        let isRunning = false;
-        let isBreakPhase = true; // Флаг, указывающий на фазу перерыва
-        let workPhaseCount = 0; // Счетчик фаз работы
-        let phaseText = 'Time to Code!'; // Начальный текст для фазы работы
-
-        // Начальные параметры времени
-        let workDuration = 25 * 60;
-        let shortBreakDuration = 5 * 60;
-        let longBreakDuration = 15 * 60;
-        let longBreakInterval = 4;
-
-        // Настройки цветов для каждой фазы
-        let workColor = '#FF0000';
-        let shortBreakColor = '#40E0D0';
-        let longBreakColor = '#FFD700';
-
-        // Функция для обновления времени на веб-странице
-        const updateTimeDisplay = () => {
-            const minutes = Math.floor(remainingTime / 60);
-            const seconds = remainingTime % 60;
-            let color = workColor; // Красный для фазы работы
-
-            if (phaseText === 'Short Break') {
-                color = shortBreakColor; // Бирюзовый для короткого отдыха
-            } else if (phaseText === 'Long Break') {
-                color = longBreakColor; // Желтый для длинного отдыха
-            }
-
-            panel.webview.postMessage({
-                type: 'update-time',
-                time: `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`,
-                phaseText: phaseText, // Отправляем текст фазы
-                color: color // Цвет текста таймера
-            });
-        };
-
-        // Функция для скрытия кнопки Skip
-        const hideSkipButton = () => {
-            panel.webview.postMessage({ type: 'toggle-skip-button', visible: false });
-        };
-
-        // Функция для показа кнопки Skip
-        const showSkipButton = () => {
-            panel.webview.postMessage({ type: 'toggle-skip-button', visible: true });
-        };
-
-        // Функция для переключения между фазами работы и перерыва
-        const switchPhase = () => {
-            if (isBreakPhase) {
-                workPhaseCount++;
-                if (workPhaseCount % longBreakInterval === 0) {
-                    remainingTime = longBreakDuration; // Длинный перерыв
-                    phaseText = 'Long Break';
-                } else {
-                    remainingTime = shortBreakDuration; // Короткий перерыв
-                    phaseText = 'Short Break';
-                }
-                isBreakPhase = false;
-            } else {
-                remainingTime = workDuration; // Фаза работы
-                phaseText = 'Time to Code!';
-                isBreakPhase = true;
-            }
-            updateTimeDisplay();
-            panel.webview.postMessage({ type: 'change-button', label: 'Start' });
-            hideSkipButton();
-        };
-
-        // Отправка начального времени
+        // Отправляем начальные данные в панель
         updateTimeDisplay();
-        hideSkipButton();
 
-        // Обработчик сообщений от веб-страницы
-        panel.webview.onDidReceiveMessage((message) => {
-            if (message.type === 'toggle-timer') {
-                if (isRunning) {
-                    // Если таймер работает, приостанавливаем его
-                    clearInterval(timerInterval!);
-                    isRunning = false;
-                    panel.webview.postMessage({ type: 'change-button', label: 'Start' });
-                    hideSkipButton();
-                } else {
-                    // Если таймер приостановлен, запускаем его
-                    timerInterval = setInterval(() => {
-                        remainingTime -= 1;
-                        if (remainingTime <= 0) {
-                            clearInterval(timerInterval!);
-                            isRunning = false;
-                            switchPhase();
-                        } else {
-                            updateTimeDisplay();
-                        }
-                    }, 1000);
-                    isRunning = true;
-                    panel.webview.postMessage({ type: 'change-button', label: 'Stop' });
-                    showSkipButton();
-                }
-            } else if (message.type === 'skip-timer') {
-                // Сбрасываем фазу и переходим к следующей
-                clearInterval(timerInterval!);
-                isRunning = false;
-                switchPhase();
-            } else if (message.type === 'open-settings') {
-                // Открываем меню настроек
-                panel.webview.postMessage({
-                    type: 'open-settings',
-                    workDuration,
-                    shortBreakDuration,
-                    longBreakDuration,
-                    longBreakInterval,
-                    workColor,
-                    shortBreakColor,
-                    longBreakColor
-                });
-            } else if (message.type === 'apply-settings') {
-                // Применяем изменения из меню настроек
-                workDuration = message.workDuration;
-                shortBreakDuration = message.shortBreakDuration;
-                longBreakDuration = message.longBreakDuration;
-                longBreakInterval = message.longBreakInterval;
-                workColor = message.workColor;
-                shortBreakColor = message.shortBreakColor;
-                longBreakColor = message.longBreakColor;
+        // Обработчик сообщений от веб-панели
+        panel.webview.onDidReceiveMessage(handleWebviewMessage);
 
-                // Переключаем обратно на таймер с новыми параметрами
-                remainingTime = workDuration;
-                phaseText = 'Time to Code!';
-                isBreakPhase = true;
-                updateTimeDisplay();
-                panel.webview.postMessage({ type: 'close-settings' });
-            }
-        });
-
-        // Содержимое webview с таймером и кнопками
+        // HTML для большого таймера
         panel.webview.html = `
             <html>
             <body style="display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: Arial, sans-serif; position: relative; flex-direction: column;">
@@ -174,11 +174,11 @@ export function activate(context: vscode.ExtensionContext) {
                     const vscode = acquireVsCodeApi();
                     const toggleButton = document.getElementById('toggleButton');
                     const skipButton = document.getElementById('skipButton');
-                    const phaseText = document.getElementById('phaseText');
-                    const timer = document.getElementById('timer');
+                    const phaseTextElement = document.getElementById('phaseText');
+                    const timerElement = document.getElementById('timer');
                     const settingsIcon = document.getElementById('settingsIcon');
                     const settingsMenu = document.getElementById('settingsMenu');
-                    const applySettings = document.getElementById('applySettings');
+                    const applySettingsButton = document.getElementById('applySettings');
 
                     toggleButton.addEventListener('click', () => {
                         vscode.postMessage({ type: 'toggle-timer' });
@@ -189,23 +189,22 @@ export function activate(context: vscode.ExtensionContext) {
                     });
 
                     settingsIcon.addEventListener('click', () => {
-                        vscode.postMessage({ type: 'open-settings' });
+                        settingsMenu.style.display = settingsMenu.style.display === 'none' ? 'block' : 'none';
                     });
 
-                    applySettings.addEventListener('click', () => {
-                        const workDuration = document.getElementById('workDuration').value * 60;
-                        const shortBreakDuration = document.getElementById('shortBreakDuration').value * 60;
-                        const longBreakDuration = document.getElementById('longBreakDuration').value * 60;
+                    applySettingsButton.addEventListener('click', () => {
+                        const workDuration = document.getElementById('workDuration').value;
+                        const shortBreakDuration = document.getElementById('shortBreakDuration').value;
+                        const longBreakDuration = document.getElementById('longBreakDuration').value;
                         const longBreakInterval = document.getElementById('longBreakInterval').value;
                         const workColor = document.getElementById('workColor').value;
                         const shortBreakColor = document.getElementById('shortBreakColor').value;
                         const longBreakColor = document.getElementById('longBreakColor').value;
-
                         vscode.postMessage({
                             type: 'apply-settings',
-                            workDuration,
-                            shortBreakDuration,
-                            longBreakDuration,
+                            workDuration: workDuration * 60,
+                            shortBreakDuration: shortBreakDuration * 60,
+                            longBreakDuration: longBreakDuration * 60,
                             longBreakInterval,
                             workColor,
                             shortBreakColor,
@@ -213,41 +212,33 @@ export function activate(context: vscode.ExtensionContext) {
                         });
                     });
 
-                    window.addEventListener('message', (event) => {
+                    window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.type === 'update-time') {
-                            timer.textContent = message.time;
-                            phaseText.textContent = message.phaseText; // Обновляем текст фазы
-                            timer.style.color = message.color; // Устанавливаем цвет таймера
+                            timerElement.textContent = message.time;
+                            phaseTextElement.textContent = message.phaseText;
+                            timerElement.style.color = message.color;
                         } else if (message.type === 'change-button') {
                             toggleButton.textContent = message.label;
                         } else if (message.type === 'toggle-skip-button') {
                             skipButton.style.display = message.visible ? 'inline-block' : 'none';
-                        } else if (message.type === 'open-settings') {
-                            settingsMenu.style.display = 'block';
-                            document.querySelector('div').style.display = 'none';
-
-                            // Обновляем текущие значения настроек
-                            document.getElementById('workDuration').value = message.workDuration / 60;
-                            document.getElementById('shortBreakDuration').value = message.shortBreakDuration / 60;
-                            document.getElementById('longBreakDuration').value = message.longBreakDuration / 60;
-                            document.getElementById('longBreakInterval').value = message.longBreakInterval;
-                            document.getElementById('workColor').value = message.workColor;
-                            document.getElementById('shortBreakColor').value = message.shortBreakColor;
-                            document.getElementById('longBreakColor').value = message.longBreakColor;
                         } else if (message.type === 'close-settings') {
                             settingsMenu.style.display = 'none';
-                            document.querySelector('div').style.display = 'block';
                         }
                     });
                 </script>
             </body>
             </html>
         `;
+    } else {
+        panel.reveal();
+    }
 
+    // Слушаем событие закрытия панели
+    panel.onDidDispose(() => {
+        panel = null;
     });
+};
 
-    context.subscriptions.push(disposable);
-}
-
-export function deactivate() {}
+// Открываем таймер при запуске расширения
+vscode.commands.registerCommand('pomodoro.openLargeTimer', openLargeTimer);
