@@ -1,71 +1,51 @@
-# pomodoro README
+# Pomodoro Timer для VS Code
 
-This is the README for your extension "pomodoro". After writing up a brief description, we recommend including the following sections.
+Простое, но мощное расширение Pomodoro Timer для Visual Studio Code, которое помогает оставаться сосредоточенным и повышать продуктивность. Это расширение позволяет удобно отслеживать время, делать перерывы и настраивать параметры Pomodoro прямо внутри VS Code.
 
-## Features
+## Функционал
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Таймер Pomodoro:** Старт, пауза и остановка таймера Pomodoro прямо из строки состояния VS Code.
+- **Короткие и длинные перерывы:** Автоматическое переключение между рабочими сессиями и перерывами с настраиваемыми длительностями для коротких и длинных перерывов.
+- **Кастомизация цветов:** Настройка цветов фаз таймера (Работа, Короткий Перерыв, Длинный Перерыв) в соответствии с вашими предпочтениями.
+- **Пропуск фазы:** Легко пропустите текущую фазу (например, работу или перерыв) и перейдите к следующей фазе одним нажатием кнопки.
+- **Настройки:** Изменяйте длительность работы, короткого и длинного перерыва, интервал для длинных перерывов, а также цветовые настройки.
+- **Webview панель:** Откройте большое окно с таймером в отдельной веб-панели с чистым и простым интерфейсом. Веб-панель отображает текущее время и фазу, а также позволяет управлять таймером с помощью кнопок.
+- **Сохранение состояния:** Состояние таймера сохраняется даже после закрытия и повторного открытия редактора.
 
-For example if there is an image subfolder under your extension project workspace:
+## Установка
 
-\!\[feature X\]\(images/feature-x.png\)
+1. Откройте VS Code и перейдите в Marketplace расширений.
+2. Найдите "Pomodoro Timer" и установите его.
+3. После установки вы можете сразу начать использовать таймер!
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Как использовать
 
-## Requirements
+1. **Запуск таймера:** Нажмите на значок в строке состояния, чтобы открыть панель с таймером.
+2. **Переключение фаз:** Таймер автоматически переключается между рабочими сессиями и перерывами. Вы можете пропустить фазу или изменить параметры в настройках.
+3. **Настройки:** Для изменения параметров работы или перерывов откройте меню настроек, нажав на значок настроек в веб-панели.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Настройки
 
-## Extension Settings
+Вы можете настроить:
+- Длительность работы (в минутах)
+- Длительность короткого перерыва (в минутах)
+- Длительность длинного перерыва (в минутах)
+- Интервал фаз работы для длинных перерывов
+- Цвета для различных фаз таймера
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## Разработка
 
-For example:
+Если вы хотите внести изменения или улучшения в расширение, вы можете клонировать этот репозиторий и начать разработку:
 
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+1. Клонируйте репозиторий:
+   ```bash
+   git clone https://github.com/tiltdepressed/The-Best-Pomodoro
+2. Перейдите в директорию проекта:
+    ```bash
+    cd The-Best-Pomodoro
+3. Установите зависимости:
+    ```bash
+    npm install
+4. Запустите расширение в режиме разработки:
+    ```bash
+    npm run watch
